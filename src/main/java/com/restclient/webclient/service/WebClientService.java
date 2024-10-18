@@ -78,6 +78,9 @@ public class WebClientService {
 
     private String buildUriWithParams(String url, Object params) {
         UriComponentsBuilder urlBuilder = UriComponentsBuilder.fromHttpUrl(url);
+        if(params == null){
+            return urlBuilder.toUriString();
+        }
         Map<String, Object> paramMap = objectMapper.convertValue(params, new TypeReference<>() {});
         paramMap.forEach((key, value) -> {
             if (value instanceof List) {
