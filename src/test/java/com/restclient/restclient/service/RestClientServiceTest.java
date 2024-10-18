@@ -1,6 +1,5 @@
 package com.restclient.restclient.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restclient.api.exception.ApiRuntimeException;
@@ -22,6 +21,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -56,14 +56,14 @@ class RestClientServiceTest {
                 .retrieve()
                 .toEntity(String.class);
 
-        System.out.println("resposne.body : "+response.getBody());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
 
         String response1 = restClient.get()
                 .uri(fullUrl)
                 .retrieve()
                 .body(String.class);
 
-        System.out.println("response : "+response1);
+        assertNotNull(response1);
 
         ResponseEntity<ApiResponse<MemberResponse>> response2 = restClient.get()
                 .uri(fullUrl)
@@ -71,11 +71,12 @@ class RestClientServiceTest {
                 .retrieve()
                 .toEntity(new ParameterizedTypeReference<>() {});
 
-        System.out.println("response2 : "+response2.getBody().getData().getName());
+        assert response2.getBody() != null;
+        assertEquals(request.getAge(), response2.getBody().getData().getAge());
     }
 
     @Test
-    void post() throws JsonProcessingException {
+    void post() {
 
         url += "/1";
 
@@ -86,6 +87,8 @@ class RestClientServiceTest {
                 .retrieve()
                 .toEntity(new ParameterizedTypeReference<>() {});
 
+        assert response.getBody() != null;
+        assertEquals(response.getBody().getData().getId(), request.getId());
 
         String failUrl = url+"/1L";
 
@@ -101,26 +104,25 @@ class RestClientServiceTest {
                     .toEntity(new ParameterizedTypeReference<>() {
                     });
         }catch(Exception e){
-            System.out.println("e.getMessage : "+e.getMessage());
+            assertEquals(ApiRuntimeException.class, e.getClass());
         }
 
-        try {
 
-        ApiResponse<MemberResponse> response1 = restClient.post()
-                .uri(failUrl)
-                .contentType(APPLICATION_JSON)
-                .body(request)
-                .exchange((req, res) -> {
-                    if (res.getStatusCode().is4xxClientError()) {
-                        throw new ApiRuntimeException(HttpStatus.valueOf(res.getStatusCode().value()), res.getStatusText());
-                    }
-                    else {
-                        return objectMapper.readValue(res.getBody(), new TypeReference<>() {});
-                    }
-                });
-        }catch(Exception e){
-            System.out.println("e.getMessage : "+e.getMessage());
-        }
+        assertThrows(ApiRuntimeException.class,
+                restClient.post()
+                        .uri(failUrl)
+                        .contentType(APPLICATION_JSON)
+                        .body(request)
+                        .exchange((req, res) -> {
+                            if (res.getStatusCode().is4xxClientError()) {
+                                throw new ApiRuntimeException(HttpStatus.valueOf(res.getStatusCode().value()), res.getStatusText());
+                            }
+                            else {
+                                return objectMapper.readValue(res.getBody(), new TypeReference<>() {});
+                            }
+                        })
+        );
+
 
     }
 
@@ -136,7 +138,8 @@ class RestClientServiceTest {
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
 
-        System.out.println("response : "+ response.getData().getName());
+        assert response != null;
+        assertEquals(response.getData().getScore(), request.getScore());
     }
 
     @Test
@@ -151,7 +154,8 @@ class RestClientServiceTest {
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
 
-        System.out.println("response : "+ response.getData().getName());
+        assert response != null;
+        assertEquals(response.getData().getHobby(), request.getHobby());
     }
 
     @Test
@@ -163,8 +167,7 @@ class RestClientServiceTest {
                 .retrieve()
                 .toBodilessEntity();
 
-        System.out.println("response : "+ response.getBody());
-        System.out.println("response : "+ response.getStatusCode());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
 
