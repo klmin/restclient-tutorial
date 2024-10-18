@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -37,24 +38,27 @@ class RestClientServiceTest {
     private ObjectMapper objectMapper;
 
     private String url;
-    MemberRequest request;
+    private MemberRequest request;
 
     @BeforeEach
     public void init(){
         url = "http://localhost:" + port + "/members";
+        LocalDateTime now = LocalDateTime.now();
         request = MemberRequest.create(1L, "테스트", 20, List.of("영화감상","운동"),
-                Map.of("수학", 80, "영어", 70));
+                Map.of("수학", 80, "영어", 70), now, now.toLocalDate());
     }
 
     @Test
     void get(){
 
         String fullUrl = buildUriWithParams(url, request);
-
+        System.out.println("fullUrl : "+fullUrl);
         ResponseEntity<String> response = restClient.get()
                 .uri(fullUrl)
                 .retrieve()
                 .toEntity(String.class);
+
+        System.out.println(response.getBody());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
@@ -78,10 +82,10 @@ class RestClientServiceTest {
     @Test
     void post() {
 
-        url += "/1";
+        String successUrl = url +"/1";
 
         ResponseEntity<ApiResponse<MemberResponse>> response = restClient.post()
-                .uri(url)
+                .uri(successUrl)
                 .contentType(APPLICATION_JSON)
                 .body(request)
                 .retrieve()
@@ -107,21 +111,23 @@ class RestClientServiceTest {
             assertEquals(ApiRuntimeException.class, e.getClass());
         }
 
+        try {
+            restClient.post()
+                    .uri(failUrl)
+                    .contentType(APPLICATION_JSON)
+                    .body(request)
+                    .exchange((req, res) -> {
+                        if (res.getStatusCode().is4xxClientError()) {
+                            throw new ApiRuntimeException(HttpStatus.valueOf(res.getStatusCode().value()), res.getStatusText());
+                        } else {
+                            return objectMapper.readValue(res.getBody(), new TypeReference<>() {
+                            });
+                        }
+                    });
 
-        assertThrows(ApiRuntimeException.class,
-                restClient.post()
-                        .uri(failUrl)
-                        .contentType(APPLICATION_JSON)
-                        .body(request)
-                        .exchange((req, res) -> {
-                            if (res.getStatusCode().is4xxClientError()) {
-                                throw new ApiRuntimeException(HttpStatus.valueOf(res.getStatusCode().value()), res.getStatusText());
-                            }
-                            else {
-                                return objectMapper.readValue(res.getBody(), new TypeReference<>() {});
-                            }
-                        })
-        );
+        }catch(Exception e){
+            assertEquals(ApiRuntimeException.class, e.getClass());
+        }
 
 
     }
@@ -176,7 +182,7 @@ class RestClientServiceTest {
 
         UriComponentsBuilder urlBuilder = UriComponentsBuilder.fromHttpUrl(url);
         Map<String, Object> paramMap = objectMapper.convertValue(params, new TypeReference<>() {});
-
+        System.out.println("param Map : "+paramMap);
         paramMap.forEach((key, value) -> {
             if (value instanceof List) {
                 ((List<?>) value).forEach(item -> urlBuilder.queryParam(key, item));
