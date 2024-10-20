@@ -14,8 +14,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.UnknownHttpStatusCodeException;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -23,7 +23,7 @@ import java.util.Map;
 @Service
 public class RestTemplateService {
 
-    private final ObjectMapper mapper;
+    private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
 
     public <T, Q, B> T exchange(String url, HttpMethod method, HttpHeaders headers, Q queryString, B body,
@@ -46,6 +46,7 @@ public class RestTemplateService {
                     : this.callExchangeGeneric(url, method, requestDTO, responseType);
 
             logStatusCode(responseEntity);
+
             return responseEntity.getBody();
 
         } catch (Exception e) {
@@ -70,20 +71,27 @@ public class RestTemplateService {
         return RequestDTO.<Q,B>builder().queryString(queryString).body(body).headers(header).build();
     }
 
-    private UriComponentsBuilder getUriComponentBuilder(String url) {
-        return UriComponentsBuilder.fromHttpUrl(url);
-    }
 
-    private <Q, B> URI setURI(String url, RequestDTO<Q, B> requestDTO) {
+    private <Q, B> String setURI(String url, RequestDTO<Q, B> requestDTO) {
 
-        UriComponentsBuilder urlBuilder = this.getUriComponentBuilder(url);
+        UriComponentsBuilder urlBuilder = UriComponentsBuilder.fromHttpUrl(url);
 
         if (requestDTO.getQueryString() != null) {
-            Map<String, Object> paramMap = mapper.convertValue(requestDTO.getQueryString(), new TypeReference<>() {});
-            paramMap.forEach(urlBuilder::queryParam);
+            Map<String, Object> paramMap = objectMapper.convertValue(requestDTO.getQueryString(), new TypeReference<>() { });
+
+            paramMap.forEach((key, value) -> {
+                if (value instanceof List) {
+                    ((List<?>) value).forEach(item -> urlBuilder.queryParam(key, item));
+                } else if (value instanceof Map) {
+                    ((Map<?, ?>) value).forEach((mapKey, mapValue) ->
+                            urlBuilder.queryParam(key + "[" + mapKey + "]", mapValue));
+                } else {
+                    urlBuilder.queryParam(key, value);
+                }
+            });
         }
 
-        return urlBuilder.build().encode().toUri();
+        return urlBuilder.build().toString();
     }
 
     private <Q, B> HttpEntity<B> setHttpEntity(RequestDTO<Q, B> requestDTO) {
