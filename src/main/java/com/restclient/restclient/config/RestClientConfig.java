@@ -30,7 +30,7 @@ public class RestClientConfig {
     private final ObjectMapper objectMapper;
 
     @Bean
-    public RestClient restClient(HttpClient httpClient) {
+    public RestClient restClient() {
         return RestClient.builder()
                 .messageConverters(
                         converters -> {
@@ -43,37 +43,10 @@ public class RestClientConfig {
     }
 
 
-//    private RestClient createRestClient(String baseUrl, RestClient restClient) {
-//        return restClient.mutate()
-//                .baseUrl(baseUrl)
-//                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-//                .defaultStatusHandler(
-//                        HttpStatusCode::is4xxClientError,
-//                        (request, response) -> {
-//                            log.error("Client Error Code : {}", response.getStatusCode());
-//                            log.error("Client Error Message : {}", new String(response.getBody().readAllBytes()));
-//                            throw new ApiRuntimeException(HttpStatus.valueOf(response.getStatusCode().value()));
-//                        })
-//                .defaultStatusHandler(
-//                        HttpStatusCode::is5xxServerError,
-//                        (request, response) -> {
-//                            log.error("Server Error Code : {}", response.getStatusCode());
-//                            log.error("Server Error Message : {}", new String(response.getBody().readAllBytes()));
-//                            throw new ApiRuntimeException(HttpStatus.valueOf(response.getStatusCode().value()));
-//                        })
-//                .build();
-//    }
-    private RestClient createRestClient(String baseUrl) {
-        return RestClient.builder()
+    private RestClient createRestClient(String baseUrl, RestClient restClient) {
+        return restClient.mutate()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .messageConverters(
-                        converters -> {
-                            converters.removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
-                            converters.add(new MappingJackson2HttpMessageConverter(objectMapper));
-                        })
-                .requestInterceptor(new RestRequestInterceptor())
-                .requestFactory(new BufferingClientHttpRequestFactory(new HttpComponentsClientHttpRequestFactory(httpClient)))
                 .defaultStatusHandler(
                         HttpStatusCode::is4xxClientError,
                         (request, response) -> {
@@ -91,10 +64,9 @@ public class RestClientConfig {
                 .build();
     }
 
-
     @Bean
     public TestClient testClient(TestProperties testProperties){
-        return httpInterfaceFactory.createClient(TestClient.class, createRestClient(testProperties.getUrl()));
+        return httpInterfaceFactory.createClient(TestClient.class, createRestClient(testProperties.getUrl(), restClient()));
     }
 
 
