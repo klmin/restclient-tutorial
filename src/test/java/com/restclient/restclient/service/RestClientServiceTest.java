@@ -52,13 +52,11 @@ class RestClientServiceTest {
     void get(){
 
         String fullUrl = buildUriWithParams(url, request);
-        System.out.println("fullUrl : "+fullUrl);
+
         ResponseEntity<String> response = restClient.get()
                 .uri(fullUrl)
                 .retrieve()
                 .toEntity(String.class);
-
-        System.out.println(response.getBody());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
@@ -182,7 +180,7 @@ class RestClientServiceTest {
 
         UriComponentsBuilder urlBuilder = UriComponentsBuilder.fromHttpUrl(url);
         Map<String, Object> paramMap = objectMapper.convertValue(params, new TypeReference<>() {});
-        System.out.println("param Map : "+paramMap);
+
         paramMap.forEach((key, value) -> {
             if (value instanceof List) {
                 ((List<?>) value).forEach(item -> urlBuilder.queryParam(key, item));
