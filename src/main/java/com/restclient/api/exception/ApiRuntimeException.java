@@ -13,6 +13,10 @@ public class ApiRuntimeException extends RuntimeException {
 	private final HttpStatus status;
 	private final int httpCode;
 
+	public ApiRuntimeException(HttpStatus status) {
+		this(status, status.value(), status.getReasonPhrase());
+	}
+
 	public ApiRuntimeException(String message) {
 		this(DEFAULT_FAIL_STATUS, DEFAULT_FAIL_STATUS.value(), message);
 	}

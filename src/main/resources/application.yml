@@ -1,0 +1,4 @@
+test:
+  url: http://localhost:8080
+  header-key: TEST_HEADER
+  header-value: TEST_VALUE
