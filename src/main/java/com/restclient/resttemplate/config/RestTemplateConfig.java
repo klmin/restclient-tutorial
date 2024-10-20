@@ -63,12 +63,14 @@ public class RestTemplateConfig {
     @Bean
     public RestTemplate restTemplate(ObjectMapper objectMapper){
 
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient());
-
         RestTemplate restTemplate = new RestTemplate();
 
+        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient());
+
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-        converter.setSupportedMediaTypes(Arrays.asList(MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM));
+        converter.setObjectMapper(objectMapper);
+        converter.setSupportedMediaTypes(Arrays.asList(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM));
+        restTemplate.getMessageConverters().removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
         restTemplate.getMessageConverters().add(converter);
 
         List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
